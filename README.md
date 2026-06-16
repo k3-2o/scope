@@ -1,4 +1,4 @@
-# Opener
+# Scope
 
 **Codebase orientation radar.** Understand any file in one screen — entry points, exports, imports, configs, anomalies. No reading the whole thing required.
 
@@ -133,7 +133,7 @@ uv tool install .   # makes `scope` available globally
 
 ## Architecture
 
-Opener is built on **scope** (its Tree-sitter AST engine) with five additional layers:
+Scope is built on its Tree-sitter AST engine with five additional layers:
 
 ```
 discover → parse → classify → extract → detect → rank → render
@@ -151,7 +151,7 @@ discover → parse → classify → extract → detect → rank → render
 
 ## Philosophy
 
-**Scope maps structure. Opener maps meaning.**
+**Scope maps structure and meaning.**
 
 Tree-sitter gives you AST nodes (functions, classes, types). But an agent doesn't need to know there are 18 functions. It needs to know:
 
