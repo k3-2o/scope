@@ -4,7 +4,7 @@ description: "Generate a compact orientation card for any source file — shows 
 compatibility: "Requires Python 3.11+ and `uv` tool. Install: `uv tool install /path/to/scope` from the repo root."
 ---
 
-# Opener
+# Scope
 
 ## Setup
 
