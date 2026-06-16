@@ -8,7 +8,7 @@ Works on Python, TypeScript, JavaScript, Go, Rust, Java, C++, and 25+ languages.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/k3-2o/opener ~/opener
+git clone https://github.com/k3-2o/scope ~/opener
 cd ~/opener
 
 # 2. Install with uv

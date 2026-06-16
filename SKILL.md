@@ -14,11 +14,11 @@ Check if opener is available:
 which opener
 ```
 
-If not found, ask the user: **"opener is not installed. Install it from github.com/k3-2o/opener?"**
+If not found, ask the user: **"opener is not installed. Install it from github.com/k3-2o/scope?"**
 If they agree, clone and install:
 
 ```bash
-git clone https://github.com/k3-2o/opener ~/opener
+git clone https://github.com/k3-2o/scope ~/opener
 cd ~/opener
 uv tool install .
 ```

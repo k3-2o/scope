@@ -1,5 +1,5 @@
 """Allows `python -m opener`."""
 
-from opener import main
+from scope import main
 
 main()

@@ -4,7 +4,7 @@ import os
 import re
 from collections import defaultdict
 
-from opener.scope.models import Symbol
+from scope._scope.models import Symbol
 
 _IDENTIFIER_RE = re.compile(r"[a-zA-Z_]\w+")
 

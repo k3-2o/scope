@@ -13,14 +13,14 @@ import os
 import sys
 from collections import Counter
 
-from opener.engine.anomaly import detect_all
-from opener.engine.classifier import classify_symbols
-from opener.engine.extractor import extract_all
-from opener.engine.parser import discover, parse_file
-from opener.render.card import render_audit_summary, render_card, render_directory_summary
-from opener.scope.engine.rank import compute_importance
-from opener.scope.engine.symbols import extract_symbols
-from opener.types import OrientationCard
+from scope._scope.engine.rank import compute_importance
+from scope._scope.engine.symbols import extract_symbols
+from scope.engine.anomaly import detect_all
+from scope.engine.classifier import classify_symbols
+from scope.engine.extractor import extract_all
+from scope.engine.parser import discover, parse_file
+from scope.render.card import render_audit_summary, render_card, render_directory_summary
+from scope.types import OrientationCard
 
 
 def main() -> None:

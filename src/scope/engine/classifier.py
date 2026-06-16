@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from opener.types import ClassifiedSymbol
+from scope.types import ClassifiedSymbol
 
 # ---------------------------------------------------------------------------
 # Naming patterns — checked by prefix/suffix

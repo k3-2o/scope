@@ -15,8 +15,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from opener.scope.engine.references import extract_imports as scope_extract_imports
-from opener.types import ClassifiedSymbol, Comment, Config, ExtractedData
+from scope._scope.engine.references import extract_imports as scope_extract_imports
+from scope.types import ClassifiedSymbol, Comment, Config, ExtractedData
 
 # ---------------------------------------------------------------------------
 # License markers — skip these when looking for file headers

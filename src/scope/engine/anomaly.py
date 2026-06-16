@@ -26,7 +26,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from opener.types import Anomaly, ClassifiedSymbol, Config, ExtractedData
+from scope.types import Anomaly, ClassifiedSymbol, Config, ExtractedData
 
 # ---------------------------------------------------------------------------
 # Main entry point
@@ -692,7 +692,7 @@ def detect_unused_export(
         # Read imports from each file's source
         repo_path = Path(current_file).parent  # approximate
         try:
-            from opener.engine.extractor import _extract_imports
+            from scope.engine.extractor import _extract_imports
 
             imports = _extract_imports(file_path, str(repo_path))
             for imp_list in imports.values():

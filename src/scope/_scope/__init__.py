@@ -6,25 +6,25 @@ import os
 import sys
 from typing import Any
 
-from opener.scope.engine.cache import (
+from scope._scope.engine.cache import (
     load_cached_symbols,
     save_cached_symbols,
 )
-from opener.scope.engine.discover import (
+from scope._scope.engine.discover import (
     discover_files,
     language_stats,
     pair_tests,
     prioritize_files,
 )
-from opener.scope.engine.frameworks import detect_frameworks
-from opener.scope.engine.rank import compute_importance, suggested_reads
-from opener.scope.engine.references import dependency_graph
-from opener.scope.engine.symbols import extract_symbols
-from opener.scope.engine.symbols import is_available as ts_available
-from opener.scope.models import Symbol
-from opener.scope.modes import map as map_mode
-from opener.scope.modes import overview as overview_mode
-from opener.scope.modes import pairs as pairs_mode
+from scope._scope.engine.frameworks import detect_frameworks
+from scope._scope.engine.rank import compute_importance, suggested_reads
+from scope._scope.engine.references import dependency_graph
+from scope._scope.engine.symbols import extract_symbols
+from scope._scope.engine.symbols import is_available as ts_available
+from scope._scope.models import Symbol
+from scope._scope.modes import map as map_mode
+from scope._scope.modes import overview as overview_mode
+from scope._scope.modes import pairs as pairs_mode
 
 MAX_FILES_DEFAULT = 1000
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from opener.scope.models import Symbol
+from scope._scope.models import Symbol
 
 
 def render(all_symbols: dict[str, list[Symbol]], token_budget: int) -> str:

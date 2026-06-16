@@ -5,7 +5,7 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from opener.scope.models import Symbol
+from scope._scope.models import Symbol
 
 _TS_PACK_AVAILABLE = False
 _PARSERS: dict[str, Parser] = {}

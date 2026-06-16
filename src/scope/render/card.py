@@ -10,8 +10,8 @@ The card always renders, even if some data is missing (graceful degradation).
 
 from __future__ import annotations
 
-from opener.engine.ranker import compute_read_order
-from opener.types import ROLE_PRIORITY, OrientationCard
+from scope.engine.ranker import compute_read_order
+from scope.types import ROLE_PRIORITY, OrientationCard
 
 # ---------------------------------------------------------------------------
 # Main entry point

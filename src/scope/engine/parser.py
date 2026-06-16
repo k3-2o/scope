@@ -14,9 +14,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from opener.scope.engine.discover import discover_files
-from opener.scope.engine.symbols import extract_symbols, get_parser
-from opener.types import ClassifiedSymbol, Comment, ParserResult
+from scope._scope.engine.discover import discover_files
+from scope._scope.engine.symbols import extract_symbols, get_parser
+from scope.types import ClassifiedSymbol, Comment, ParserResult
 
 # ---------------------------------------------------------------------------
 # Constants

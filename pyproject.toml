@@ -1,5 +1,5 @@
 [project]
-name = "opener"
+name = "scope"
 version = "0.1.0"
 description = "Codebase orientation radar — know what you're looking at, fast"
 requires-python = ">=3.11"
@@ -18,7 +18,7 @@ dev = [
 ]
 
 [project.scripts]
-opener = "opener:main"
+scope = "scope:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -38,9 +38,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# scope is inherited code — don't require docstrings, don't enforce line length
-"src/opener/scope/*" = ["D", "E501", "N806", "B007", "SIM101", "SIM103", "SIM105", "F401"]
-"src/opener/__init__.py" = ["D"]  # CLI entry stub, not yet documented
+# _scope is inherited code — don't require docstrings, don't enforce line length
+"src/scope/_scope/*" = ["D", "E501", "N806", "B007", "SIM101", "SIM103", "SIM105", "F401"]
+"src/scope/__init__.py" = ["D"]  # CLI entry stub, not yet documented
 
 [tool.ruff.format]
 quote-style = "double"
@@ -54,7 +54,7 @@ warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = "opener.scope.*"
+module = "scope._scope.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]

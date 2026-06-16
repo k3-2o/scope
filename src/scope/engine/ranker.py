@@ -11,7 +11,7 @@ The top 5-7 symbols are shown in the orientation card's "READ ORDER" section.
 
 from __future__ import annotations
 
-from opener.types import ROLE_PRIORITY, ClassifiedSymbol
+from scope.types import ROLE_PRIORITY, ClassifiedSymbol
 
 # ---------------------------------------------------------------------------
 # Main entry point

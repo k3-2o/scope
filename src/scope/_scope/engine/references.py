@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from opener.scope.engine.discover import SUPPORTED_EXTENSIONS
+from scope._scope.engine.discover import SUPPORTED_EXTENSIONS
 
 IMPORT_RE = re.compile(
     r"(?:from\s+([\w\.\/\-@]+)\s+import|import\s+([\w\.\/\-@]+)|require\(['\"]([^'\"]+)['\"]\)|use\s+([\w:]+))"
