@@ -14,10 +14,13 @@ Check if scope is available:
 which scope
 ```
 
-If not found, install from the repo root:
+If not found, ask the user: **"scope is not installed. Install it from github.com/k3-2o/scope?"**
+If they agree, clone and install:
 
 ```bash
-cd ~/scope && uv tool install .
+git clone https://github.com/k3-2o/scope ~/scope
+cd ~/scope
+uv tool install .
 ```
 
 Then verify:

@@ -2,5 +2,5 @@
   "id": "skill-scope-001",
   "version": "1.0.0",
   "name": "scope",
-  "description": "Codebase orientation radar — instantly understand any file or directory's structure, roles, exports, configs, and anomalies."
+  "description": "Generate a compact orientation card for any source file — shows entry points, exports, imports, configs, structural issues, and what to read first."
 }
