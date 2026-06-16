@@ -1,0 +1,6 @@
+{
+  "id": "skill-opener-001",
+  "version": "1.0.0",
+  "name": "opener",
+  "description": "Codebase orientation radar — instantly understand any file or directory's structure, roles, exports, configs, and anomalies."
+}

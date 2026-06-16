@@ -1,0 +1,74 @@
+[project]
+name = "opener"
+version = "0.1.0"
+description = "Codebase orientation radar — know what you're looking at, fast"
+requires-python = ">=3.11"
+dependencies = [
+    "tree-sitter>=0.23",
+    "tree-sitter-language-pack>=0.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "bandit>=1.7",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.scripts]
+opener = "opener:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG", "C4"]
+ignore = [
+    "ARG001", # Unused function argument (common in callbacks)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# scope is inherited code — don't require docstrings, don't enforce line length
+"src/opener/scope/*" = ["D", "E501", "N806", "B007", "SIM101", "SIM103", "SIM105", "F401"]
+"src/opener/__init__.py" = ["D"]  # CLI entry stub, not yet documented
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = "opener.scope.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "opener.*"
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+check_untyped_defs = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]  # Allow assert statements
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-v --tb=short"
+testpaths = ["tests"]

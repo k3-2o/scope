@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+from typing import Any
+
+from opener.scope.models import Symbol
+
+
+def cache_dir(repo_path: str) -> Path:
+    git_dir = Path(repo_path) / ".git"
+    if git_dir.is_dir():
+        return git_dir
+    fallback = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "repo-baby"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
+def _cache_path(repo_path: str, filename: str) -> Path:
+    return cache_dir(repo_path) / filename
+
+
+def cache_file(repo_path: str) -> Path:
+    return _cache_path(repo_path, "scope-cache-v2.json")
+
+
+def files_signature(repo_path: str, files: list[str]) -> str:
+    from opener.scope.engine.git import git_head
+
+    h = hashlib.sha256()
+    h.update(git_head(repo_path).encode())
+    for rel_path in files:
+        full_path = Path(repo_path) / rel_path
+        try:
+            stat = full_path.stat()
+        except OSError:
+            continue
+        h.update(rel_path.encode())
+        h.update(str(stat.st_mtime_ns).encode())
+        h.update(str(stat.st_size).encode())
+    return h.hexdigest()
+
+
+def load_cached_symbols(
+    repo_path: str, files: list[str], scope: str, max_files: int
+) -> dict[str, list[Symbol]] | None:
+    from opener.scope.engine.discover import normalize_scope
+
+    path = cache_file(repo_path)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if payload.get("signature") != files_signature(repo_path, files):
+        return None
+    if payload.get("scope") != normalize_scope(scope) or payload.get("max_files") != max_files:
+        return None
+    return _symbols_from_dict(payload.get("symbols", {}))
+
+
+def save_cached_symbols(
+    repo_path: str,
+    files: list[str],
+    scope: str,
+    max_files: int,
+    all_symbols: dict[str, list[Symbol]],
+) -> None:
+    from opener.scope.engine.discover import normalize_scope
+
+    payload = {
+        "version": 2,
+        "signature": files_signature(repo_path, files),
+        "scope": normalize_scope(scope),
+        "max_files": max_files,
+        "symbols": _symbols_to_dict(all_symbols),
+    }
+    try:
+        cache_file(repo_path).write_text(json.dumps(payload), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _symbols_to_dict(all_symbols: dict[str, list[Symbol]]) -> dict[str, list[dict[str, Any]]]:
+    return {fp: [s.to_dict() for s in syms] for fp, syms in all_symbols.items()}
+
+
+def _symbols_from_dict(data: dict[str, list[dict[str, Any]]]) -> dict[str, list[Symbol]]:
+    return {fp: [Symbol.from_dict(s) for s in syms] for fp, syms in data.items()}
