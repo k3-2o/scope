@@ -26,10 +26,10 @@ check: lint fmt typecheck
 # --- Testing ---
 
 test:
-	uv run python -m pytest tests/ --cov=src/opener -v
+	uv run python -m pytest tests/ --cov=src/scope -v
 
 test-verbose:
-	uv run python -m pytest tests/ -v --tb=long --cov=src/opener --cov-report=term-missing
+	uv run python -m pytest tests/ -v --tb=long --cov=src/scope --cov-report=term-missing
 
 # --- Cleanup ---
 

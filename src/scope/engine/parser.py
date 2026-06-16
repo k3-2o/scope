@@ -105,7 +105,7 @@ def parse_file(file_path: str, repo_path: str) -> ParserResult:
     # --- Extract symbols via scope ---
     scope_symbols = extract_symbols(file_path, repo_path)
 
-    # Convert scope's Symbol to opener's ClassifiedSymbol
+    # Convert inherited Symbol to ClassifiedSymbol
     classified: list[ClassifiedSymbol] = []
     for sym in scope_symbols:
         classified.append(

@@ -1,5 +1,5 @@
 """
-Shared types for the opener pipeline.
+Shared types for the scope pipeline.
 
 Every phase reads from or writes to these dataclasses. Keep them lean.
 No business logic — just data.

@@ -1,4 +1,4 @@
-"""Allows `python -m opener`."""
+"""Allows .python -m scope.."""
 
 from scope import main
 

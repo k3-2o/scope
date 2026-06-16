@@ -8,8 +8,8 @@ Works on Python, TypeScript, JavaScript, Go, Rust, Java, C++, and 25+ languages.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/k3-2o/scope ~/opener
-cd ~/opener
+git clone https://github.com/k3-2o/scope ~/scope
+cd ~/scope
 
 # 2. Install with uv
 uv tool install .
@@ -18,26 +18,26 @@ uv tool install .
 Then verify:
 
 ```bash
-opener --help
+scope --help
 ```
 
 ## Usage
 
 ```bash
 # One file — see what it does, what's important, what's wrong
-opener --path src/main.py
+scope --path src/main.py
 
 # A directory — per-file cards + summary
-opener --path src/
+scope --path src/
 
 # Structural audit overview — aggregated issues across all files
-opener --path src/ --mode audit
+scope --path src/ --mode audit
 
 # Full detail with every symbol listed
-opener --path src/ --verbose
+scope --path src/ --verbose
 
 # Machine-readable output
-opener --path src/ --output json
+scope --path src/ --output json
 ```
 
 ## What It Tells You
@@ -128,7 +128,7 @@ make check          # all three
 make test           # 32 pytest tests
 
 # Install locally
-uv tool install .   # makes `opener` available globally
+uv tool install .   # makes `scope` available globally
 ```
 
 ## Architecture

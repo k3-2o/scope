@@ -29,10 +29,10 @@ def main() -> None:
         description="Codebase orientation radar — know what you're looking at, fast",
         epilog=(
             "examples:\n"
-            "  opener --path main.py                          Single file card\n"
-            "  opener --path src/                              Directory cards\n"
-            "  opener --path src/ --mode audit                 Repo health\n"
-            "  opener --path src/ --verbose                    Full detail\n"
+            "  scope --path main.py                          Single file card\n"
+            "  scope --path src/                              Directory cards\n"
+            "  scope --path src/ --mode audit                 Repo health\n"
+            "  scope --path src/ --verbose                    Full detail\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -171,7 +171,7 @@ def _handle_directory_orient(dir_path: str, max_files: int, verbose: bool, outpu
         for sym in syms:
             ref_lookup[(file_path, sym.name, sym.line)] = getattr(sym, "ref_count", 0)
 
-    # --- Phase 3: full opener pipeline per file ---
+    # --- Phase 3: full pipeline per file ---
     cards: list[OrientationCard] = []
     for rel_path in files:
         card = _handle_file(os.path.join(dir_path, rel_path), dir_path, verbose, output)
@@ -216,7 +216,7 @@ def _handle_directory_audit(dir_path: str, max_files: int, output: str) -> None:
         for sym in syms:
             ref_lookup[(file_path, sym.name, sym.line)] = getattr(sym, "ref_count", 0)
 
-    # --- Phase 2: full opener pipeline per file ---
+    # --- Phase 2: full pipeline per file ---
     cards: list[OrientationCard] = []
     for rel_path in files:
         full_path = os.path.join(dir_path, rel_path)
