@@ -1,7 +1,7 @@
 """Tests for the extractor — headers, exports, configs."""
 
-from opener.engine.extractor import _extract_header, _extract_exports, _extract_configs
-from opener.types import Comment
+from scope.engine.extractor import _extract_header, _extract_exports, _extract_configs
+from scope.types import Comment
 
 
 class TestHeaderExtraction:

@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from opener.engine.classifier import classify_symbols
-from opener.types import ClassifiedSymbol
+from scope.engine.classifier import classify_symbols
+from scope.types import ClassifiedSymbol
 
 
 def _make_sym(name: str, kind: str = "function", line: int = 1, exported: bool = False) -> ClassifiedSymbol:
@@ -95,5 +95,5 @@ class TestStructuralClassification:
 
 def _parse(repo: Path, file: str):
     """Helper: parse a single test file."""
-    from opener.engine.parser import parse_file
+    from scope.engine.parser import parse_file
     return parse_file(file, str(repo))

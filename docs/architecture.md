@@ -30,9 +30,9 @@ file path
 ## File Map
 
 ```
-src/opener/
+src/scope/
 ├── __init__.py           CLI entry (argparse, dispatch, exit codes)
-├── __main__.py           python -m opener support
+├── __main__.py           python -m scope support
 ├── types.py              Shared dataclasses (ClassifiedSymbol, Role, Anomaly, etc.)
 ├── engine/
 │   ├── parser.py         Tree-sitter AST via scope + comment collection
@@ -103,7 +103,7 @@ to each file's symbols before classification/rendering.
 
 ## vs scope
 
-| Dimension | scope | opener |
+| Dimension | scope | scope |
 |---|---|---|
 | Output | Symbol list + importance scores | Orientation card (summary, roles, anomalies, read order) |
 | Symbols | Functions, classes, types only | Same + consts, comments, literals |

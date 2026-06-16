@@ -1,12 +1,12 @@
 """Tests for the anomaly detector."""
 
-from opener.engine.anomaly import (
+from scope.engine.anomaly import (
     detect_missing_header,
     detect_weak_naming,
     detect_hardcoded_values,
     detect_silent_errors,
 )
-from opener.types import ClassifiedSymbol, Anomaly
+from scope.types import ClassifiedSymbol, Anomaly
 
 
 def _make_sym(name: str, kind: str = "function", line: int = 1) -> ClassifiedSymbol:

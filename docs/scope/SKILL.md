@@ -1,29 +1,29 @@
 ---
-name: opener
+name: scope
 description: "Generate a compact orientation card for any source file — shows entry points, exports, imports, configs, structural issues, and what to read first. Use when: dropped into an unfamiliar codebase, need to understand a file without reading it all, want to know what symbols are important before editing, or looking for structural problems (hardcoded values, deep nesting, silent error handling) before a code review. Trigger words: orient, explore, what's here, map codebase, overview, understand file, read order, code structure, file summary, radar."
-compatibility: "Requires Python 3.11+ and `uv` tool. Install: `uv tool install /path/to/opener` from the repo root."
+compatibility: "Requires Python 3.11+ and `uv` tool. Install: `uv tool install /path/to/scope` from the repo root."
 ---
 
 # Opener
 
 ## Setup
 
-Check if opener is available:
+Check if scope is available:
 
 ```bash
-which opener
+which scope
 ```
 
 If not found, install from the repo root:
 
 ```bash
-cd ~/opener && uv tool install .
+cd ~/scope && uv tool install .
 ```
 
 Then verify:
 
 ```bash
-which opener
+which scope
 ```
 
 ## Workflow
@@ -33,7 +33,7 @@ which opener
 Run:
 
 ```bash
-opener --path <file>
+scope --path <file>
 ```
 
 This prints a compact card with five sections:
@@ -48,7 +48,7 @@ This prints a compact card with five sections:
 If you're new to a project, run:
 
 ```bash
-opener --path <directory>
+scope --path <directory>
 ```
 
 This produces a card for every supported file plus a directory summary showing which files have the most issues. Focus on the high-anomaly files first — they need more attention.
@@ -76,17 +76,17 @@ Open each file and read the listed symbols in that order. This gives you the cri
 If the compact card doesn't give enough context, run with verbose:
 
 ```bash
-opener --path <file> --verbose
+scope --path <file> --verbose
 ```
 
 This shows every symbol with its line number, role, and classification confidence. Use this when you need to see what didn't get classified.
 
 ## When to Skip
 
-Do not use opener when:
+Do not use scope when:
 - The file is a config file (package.json, pyproject.toml, tsconfig.json) — no symbols to classify, the card will be empty
-- The file is binary or minified — opener skips these automatically via extension and null-byte detection
+- The file is binary or minified — scope skips these automatically via extension and null-byte detection
 - You already know the file structure — the card is for orientation, not detailed analysis
-- The task is a simple one-line edit — opener helps with unfamiliar code, not trivial changes you already understand
+- The task is a simple one-line edit — scope helps with unfamiliar code, not trivial changes you already understand
 - You need code quality metrics (complexity, test coverage) — use a structural analysis tool for that
-- You need deep logical analysis of a single function — opener shows structure, not correctness
+- You need deep logical analysis of a single function — scope shows structure, not correctness
