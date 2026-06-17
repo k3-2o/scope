@@ -1,7 +1,7 @@
-# Opener Architecture
+# Scope Architecture
 
-Opener is a CLI tool that produces a compact orientation card for any source file.
-It builds on **scope** (Tree-sitter AST engine) with 5 additional phases.
+Scope is a CLI tool that produces a compact orientation card for any source file.
+It builds on Tree-sitter with 5 additional phases layered on top of symbol extraction.
 
 ## Pipeline
 
@@ -35,14 +35,14 @@ src/scope/
 ├── __main__.py           python -m scope support
 ├── types.py              Shared dataclasses (ClassifiedSymbol, Role, Anomaly, etc.)
 ├── engine/
-│   ├── parser.py         Tree-sitter AST via scope + comment collection
+│   ├── parser.py         Tree-sitter AST via inherited engine + comment collection
 │   ├── classifier.py     Naming-first, structure-fallback role detection
 │   ├── extractor.py      File headers, exports (TS/Python/Go), imports, configs
 │   ├── anomaly.py        12 heuristic detectors
 │   └── ranker.py         Read order by role priority + ref count
 ├── render/
 │   └── card.py           Compact and verbose orientation card formatter
-└── scope/                Inherited from scope project (Tree-sitter AST engine)
+└── _scope/               Inherited symbol extraction engine (Tree-sitter)
     ├── engine/
     │   ├── symbols.py    extract_symbols() — core AST walker
     │   ├── discover.py   discover_files(), language detection
@@ -81,7 +81,7 @@ The card always renders, even if no anomalies are found.
 - **TypeScript**: `export default`, `export function`, `export class`
 - **Python**: module-level `def` and `class` at indent 0
 - **Go**: capitalized function/type names (`func GetName`)
-- All other languages: rely on scope's `is_exported` flag
+- All other languages: rely on the inherited engine's `is_exported` flag
 
 ### Cross-file ref counts require directory mode
 
@@ -99,18 +99,20 @@ to each file's symbols before classification/rendering.
 | Encoding errors | Falls back to latin-1 |
 | Symlinks | Resolved via os.path.realpath |
 | No supported files | Exit code 2 with message |
-| All parse failures Graceful degradation, partial card |
+| All parse failures | Graceful degradation, partial card |
 
-## vs scope
+## Comparison: Old scope vs New scope
 
-| Dimension | scope | scope |
+The original scope was a symbol extraction CLI — it listed functions and their cross-file importance. This tool is its replacement with:
+
+| Dimension | Old scope | New scope |
 |---|---|---|
 | Output | Symbol list + importance scores | Orientation card (summary, roles, anomalies, read order) |
 | Symbols | Functions, classes, types only | Same + consts, comments, literals |
 | Classification | None (raw symbols only) | 12 roles via naming + structural matching |
 | Anomalies | None | 12 heuristic detectors |
 | Multi-language | 25+ languages (Tree-sitter) | Same engine, plus per-language exports |
-| CLI | `--path --mode map\|overview\|pairs` | `--path --mode orient|health --verbose` |
+| CLI | `--path --mode map\|overview\|pairs` | `--path --mode orient|audit --verbose` |
 | Install | `uv tool install .` | `uv tool install .` (same) |
 
 ## Dependencies
