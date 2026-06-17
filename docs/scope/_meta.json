@@ -1,6 +1,4 @@
 {
   "id": "skill-scope-001",
-  "version": "1.0.0",
-  "name": "scope",
-  "description": "Generate a compact orientation card for any source file — shows entry points, exports, imports, configs, structural issues, and what to read first."
+  "version": "1.0.0"
 }

@@ -1,95 +1,106 @@
 ---
 name: scope
-description: "Generate a compact orientation card for any source file — shows entry points, exports, imports, configs, structural issues, and what to read first. Use when: dropped into an unfamiliar codebase, need to understand a file without reading it all, want to know what symbols are important before editing, or looking for structural problems (hardcoded values, deep nesting, silent error handling) before a code review. Trigger words: orient, explore, what's here, map codebase, overview, understand file, read order, code structure, file summary, radar."
-compatibility: "Requires Python 3.11+ and `uv` tool. Install: `uv tool install /path/to/scope` from the repo root."
+description: "Generates compact orientation cards for source files and directories — showing entry points, exports, imports, symbol roles, cross-file dependencies, and structural issues ranked by importance. Use when: dropped into an unfamiliar codebase and cannot name the top 3 most important files; the user gives an open-ended task spanning multiple modules and you need the project map first; about to edit or refactor a file you haven't read yet and need the symbol-level read order; or about to rename or move a shared symbol and need to check what depends on it. Trigger words: orient, explore, overview, map codebase, understand file, code structure, file summary, radar, unfamiliar repo, critical path, read order."
+compatibility: "Requires Python 3.11+ and `uv`. Install with `uv tool install` from the scope repo root."
 ---
 
 # Scope
 
+Codebase orientation radar. Understand what you're looking at before you read a single line.
+
 ## Setup
 
-Check if scope is available:
+Check prerequisites:
 
 ```bash
 which scope
 ```
 
-If not found, ask the user: **"scope is not installed. Install it from github.com/k3-2o/scope?"**
-If they agree, clone and install:
+If missing, install:
 
 ```bash
-git clone https://github.com/k3-2o/scope ~/scope
-cd ~/scope
-uv tool install .
+git clone https://github.com/k3-2o/scope ~/scope && cd ~/scope && uv tool install .
 ```
 
-Then verify:
+Verify: `which scope`
 
-```bash
-which scope
-```
+## When to invoke
+
+- **New project, no map.** You just entered a codebase and cannot name its three most important files. Run `scope --path <directory>` to get per-file cards ranked by importance and issue count.
+- **About to edit unfamiliar code.** The user asked you to modify a file you haven't read yet. Run `scope --path <file>` first to get the symbol-level read order — which symbols to read, and in what sequence, before writing a single edit.
+- **Cross-file impact check.** You renamed or moved a shared symbol and need to know what other files reference it. Run `scope --path <file>` and inspect the imports, exports, and cross-file reference counts in the card.
+- **Pre-review or refactor health pass.** You need a quick structural overview across a directory before diving deeper. Run `scope --path <directory>` to surface files ranked by anomaly and dependency density.
 
 ## Workflow
 
-### Step 1: Get Your Bearings on a File
-
-Run:
+### Step 1: Orient on a single file
 
 ```bash
 scope --path <file>
 ```
 
-This prints a compact card with five sections:
-- **Header** — file language and one-line summary from its own docstring
-- **Stats** — how many symbols, roles, exports, imports, configs, anomalies
-- **Read Order** — symbol names ranked by importance, with line numbers. Read these first.
-- **Anomalies** — structural issues the tool found (hardcoded URLs, deep nesting, silent catch blocks)
-- **Roles** — what each classified symbol does (entry_point, normalizer, http_caller, etc.)
+Returns a compact card with five sections: language header, symbol stats, ranked read order, anomalies, and role classifications.
 
-### Step 2: Orient on a Directory
+**Read the read-order symbols first.** They are ranked by role priority (entry points first), then cross-file reference count (higher = more files depend on it), then line number. This is the critical path through the file.
 
-If you're new to a project, run:
+### Step 2: Orient on a directory
 
 ```bash
 scope --path <directory>
 ```
 
-This produces a card for every supported file plus a directory summary showing which files have the most issues. Focus on the high-anomaly files first — they need more attention.
+Produces a card for every supported file plus a directory summary. The summary surfaces files ranked by issue count and cross-file reference density. Focus on high-anomaly files first.
 
-### Step 3: Read the Top Anomalies Yourself
+For large directories, cap the scan:
 
-For each anomaly in the card, open the file and judge for yourself:
+```bash
+scope --path <directory> --max-files 50
+```
 
-- **Hardcoded URLs** — should they be extracted to a config constant?
-- **Deep nesting** — is the function genuinely hard to follow, or is it a state machine that needs the branches?
-- **Silent catch blocks** — does the error get handled elsewhere, or is it genuinely swallowed?
-- **Dual-mode handlers** — is it a v1/v2 compatibility shim, or just sloppy code?
+For a repo-wide structural summary:
 
-### Step 4: Read in the Suggested Order
+```bash
+scope --path <directory> --mode audit
+```
 
-The "Read Order" section lists symbols ranked by:
-1. Role priority (entry points first)
-2. Cross-file reference count (higher = more files depend on it)
-3. Line number (earlier in file = tiebreaker)
-
-Open each file and read the listed symbols in that order. This gives you the critical path through the file without reading everything.
-
-### Step 5: Get More Detail When Needed
-
-If the compact card doesn't give enough context, run with verbose:
+### Step 3: Get full detail when the compact card isn't enough
 
 ```bash
 scope --path <file> --verbose
 ```
 
-This shows every symbol with its line number, role, and classification confidence. Use this when you need to see what didn't get classified.
+Shows every symbol with its line number, role, and classification confidence — useful when something didn't get classified or you need to see what was missed.
+
+### Step 4: Get structured output for downstream processing
+
+```bash
+scope --path <file> --output json
+```
+
+Use JSON when another step or tool needs to parse the card programmatically. Default text output is for human and agent reading.
+
+### Step 5: Bypass the cache after large refactors
+
+After renames, moves, or mass edits the symbol cache may be stale:
+
+```bash
+scope --path <directory> --no-cache
+```
+
+## Interpreting output
+
+Your job is to read the card and act on it, not to dump it back at the user. Prioritize:
+
+- **Read order** — the critical path. Start there before reading anything else.
+- **Cross-file references** — blast radius for any edit. Symbols other files import are high-risk when renaming or restructuring.
+- **Anomalies** — structural red flags (hardcoded values, deep nesting, silent catch blocks). Note them, then judge for yourself. The tool classifies; it does not decide.
+- **Role classifications** — what each symbol does (entry point, http caller, normalizer, config loader). Use these to build a mental model fast.
 
 ## When to Skip
 
-Do not use scope when:
-- The file is a config file (package.json, pyproject.toml, tsconfig.json) — no symbols to classify, the card will be empty
-- The file is binary or minified — scope skips these automatically via extension and null-byte detection
-- You already know the file structure — the card is for orientation, not detailed analysis
-- The task is a simple one-line edit — scope helps with unfamiliar code, not trivial changes you already understand
-- You need code quality metrics (complexity, test coverage) — use a structural analysis tool for that
-- You need deep logical analysis of a single function — scope shows structure, not correctness
+- The path is a config file with no symbols to classify (`package.json`, `pyproject.toml`, `.env`)
+- The file is binary, minified, or auto-generated
+- You already know the file structure and just need to find one specific symbol
+- The task is a trivial one-line edit in code you already understand
+- You need code complexity metrics, test coverage, or security analysis — use a structural analysis tool for that
+- You need deep logical analysis of a single function's correctness — scope shows structure, not semantic correctness
