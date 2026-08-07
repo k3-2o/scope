@@ -20,42 +20,41 @@ file path
 4. ANOMALY DETECTOR — 12 heuristic rules
    → Anomaly[] sorted by severity (high → medium → low)
   ↓
-5. RANKER — Read order by role priority + cross-file ref counts
+5. RANKER — Role priority, then PageRank-overlaid importance + blast radius
    → ordered symbol list
   ↓
-6. RENDERER — Compact or verbose orientation card
-   → ~20 line card printed to stdout
+6. JSON — serialize the orientation card
+   → structured JSON to stdout (single file) or a JSON array (directory)
 ```
 
 ## File Map
 
 ```
 src/scope/
-├── __init__.py           CLI entry (argparse, dispatch, exit codes)
+├── __init__.py           CLI entry (argparse, dispatch, cache wiring, JSON, --changed/--schema)
 ├── __main__.py           python -m scope support
 ├── types.py              Shared dataclasses (ClassifiedSymbol, Role, Anomaly, etc.)
-├── engine/
-│   ├── parser.py         Tree-sitter AST via inherited engine + comment collection
+├── engine/               Analytic layer
+│   ├── parser.py         Tree-sitter parse via ast engine + comment collection
 │   ├── classifier.py     Naming-first, structure-fallback role detection
-│   ├── extractor.py      File headers, exports (TS/Python/Go), imports, configs
+│   ├── extractor.py      Headers, exports, categorized imports, configs
 │   ├── anomaly.py        12 heuristic detectors
-│   └── ranker.py         Read order by role priority + ref count
-├── render/
-│   └── card.py           Compact and verbose orientation card formatter
-└── _scope/               Inherited symbol extraction engine (Tree-sitter)
-    ├── engine/
-    │   ├── symbols.py    extract_symbols() — core AST walker
-    │   ├── discover.py   discover_files(), language detection
-    │   ├── references.py dependency graph, import extraction
-    │   └── rank.py       compute_importance() — cross-file ref counting
-    └── models.py         Symbol dataclass
+│   └── ranker.py         Read-order ranking by role priority + importance
+└── ast/                   Low-level Tree-sitter engine (no CLI)
+    ├── models.py         Symbol dataclass
+    └── engine/
+        ├── symbols.py    extract_symbols() — Tree-sitter AST walker
+        ├── discover.py   file discovery, ignore rules, prioritization
+        ├── references.py import extraction + internal-import resolution
+        ├── rank.py       in-degree + PageRank + blast radius
+        └── cache.py      symbol cache (save/load, git-aware signature)
 
 tests/
-├── test_classifier.py    11 tests
-├── test_extractor.py     11 tests
-└── test_anomaly.py       10 tests
-```
-
+├── test_classifier.py
+├── test_extractor.py
+├── test_anomaly.py
+├── test_rank.py
+├── test_cli.py            CLI/JSON regressions, cache + double-parse guards
 ## Key Decisions
 
 ### Classification: naming-first, structure-second
@@ -85,9 +84,15 @@ The card always renders, even if no anomalies are found.
 
 ### Cross-file ref counts require directory mode
 
-Single-file mode always shows 0 refs. Directory mode does a two-phase pass:
-first collect all symbols, compute cross-file importance, then apply ref counts
-to each file's symbols before classification/rendering.
+Single-file mode always shows 0 refs. Directory mode does a coordinated pass:
+collect all symbols once, compute cross-file importance, then build each
+file's card from the shared symbol data (no second Tree-sitter pass).
+
+### A single engine, one parse per file
+
+The Tree-sitter engine (the `ast` package) is parsed exactly once per file even
+in directory mode: discovery + reference counting reuse the extraction that
+feeds the per-file cards.
 
 ## Edge Cases Handled
 
@@ -103,17 +108,16 @@ to each file's symbols before classification/rendering.
 
 ## Comparison: Old scope vs New scope
 
-The original scope was a symbol extraction CLI — it listed functions and their cross-file importance. This tool is its replacement with:
+Recently the repo consolidated: the symbol-listing CLI (modes `map|overview|pairs`)
+and its dedicated helpers were removed. Only the low-level Tree-sitter extraction
+it shared with this tool survived, promoted to the `ast` package. This tool is
+now the single CLI with per-file orientation cards and a directory/audit view:
 
-| Dimension | Old scope | New scope |
-|---|---|---|
-| Output | Symbol list + importance scores | Orientation card (summary, roles, anomalies, read order) |
-| Symbols | Functions, classes, types only | Same + consts, comments, literals |
-| Classification | None (raw symbols only) | 12 roles via naming + structural matching |
-| Anomalies | None | 12 heuristic detectors |
-| Multi-language | 25+ languages (Tree-sitter) | Same engine, plus per-language exports |
-| CLI | `--path --mode map\|overview\|pairs` | `--path --mode orient|audit --verbose` |
-| Install | `uv tool install .` | `uv tool install .` (same) |
+```
+scope --path <file|dir> [--mode orient|audit] [--max-files N] [--no-cache]
+```
+
+Output is always JSON; pipe through `jq` for any human layout.
 
 ## Dependencies
 

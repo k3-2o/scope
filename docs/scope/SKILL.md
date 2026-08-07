@@ -63,21 +63,23 @@ For a repo-wide structural summary:
 scope --path <directory> --mode audit
 ```
 
-### Step 3: Get full detail when the compact card isn't enough
+### Step 3: Read the full detail (output is JSON)
 
 ```bash
-scope --path <file> --verbose
+scope --path <file> | jq '.symbols[] | {name, role, line, refs, blast_radius}'
 ```
 
-Shows every symbol with its line number, role, and classification confidence — useful when something didn't get classified or you need to see what was missed.
+The JSON output always carries every symbol with its line, role, confidence,
+cross-file references, importance, and blast radius — nothing is truncated.
 
-### Step 4: Get structured output for downstream processing
+### Step 4: Route the JSON downstream
 
 ```bash
-scope --path <file> --output json
+scope --path <dir> | jq -r '.[].symbols[] | [.name, .role, .blast_radius] | @tsv'
 ```
 
-Use JSON when another step or tool needs to parse the card programmatically. Default text output is for human and agent reading.
+Output is always JSON, so any parser — or agent — consumes it directly, with no
+conversion flag.
 
 ### Step 5: Bypass the cache after large refactors
 
@@ -89,7 +91,7 @@ scope --path <directory> --no-cache
 
 ## Interpreting output
 
-Your job is to read the card and act on it, not to dump it back at the user. Prioritize:
+Your job is to read the JSON and act on it, not to dump it back at the user. Prioritize:
 
 - **Read order** — the critical path. Start there before reading anything else.
 - **Cross-file references** — blast radius for any edit. Symbols other files import are high-risk when renaming or restructuring.

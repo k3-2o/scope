@@ -1,62 +1,55 @@
 # Scope
 
-**Codebase orientation radar.** Understand any file in one screen — entry points, exports, imports, configs, anomalies. No reading the whole thing required.
+> Turn any file or directory into a structured **codebase orientation map** with entry points, exports, imports, symbol roles, and an importance ranking, as machine-readable JSON.
 
-Works on Python, TypeScript, JavaScript, Go, Rust, Java, C++, and 25+ languages.
+Scope is a CLI for the problem every developer meets: *what is this file, what matters in it, and where do I look first?* Instead of reading a whole file to find out, scope parses it with Tree-sitter (25+ languages), classifies each symbol into a role, detects structural anomalies, and ranks symbols by cross-file importance and blast radius, then emits clean JSON for `jq`, a script, or a coding agent.
 
-## Install
+## Features
+
+- **One-file or whole-directory orientation**, output as strict JSON (no human-formatting layer to fight).
+- **Role classification** — every symbol tagged as an `entry_point`, `http_caller`, `normalizer`, `accessor`, `mutator`, `predicate`, etc.
+- **Graph ranking** — PageRank over the import graph + transitive **blast radius**, so central files surface first.
+- **Anomaly detection** — 12 heuristic rules flag high nesting, silent catch blocks, hardcoded values, unused exports, and more.
+- **Fast** — symbol cache, `--changed <ref>` for diff-scoped scans, and 25+ languages via Tree-sitter.
+
+## Quick Start
 
 ```bash
-git clone https://github.com/k3-2o/scope ~/scope
-cd ~/scope
-uv tool install .
+pip install -e .          # or: uv sync && uv tool install .
+scope --path src/main.py
 ```
 
-Verify:
-
-```bash
-scope --help
-```
+JSON for any file in one command.
 
 ## Usage
 
 ```bash
-scope --path src/main.py          # one file card
-scope --path src/                 # directory cards + summary
-scope --path src/ --mode audit    # aggregated health overview
-scope --path src/ --verbose       # full symbol detail
-scope --path src/ --output json   # machine-readable
+scope --path src/main.py             # one file  → JSON object
+scope --path src/                    # a directory → JSON array of files
+scope --path src/ --mode audit       # repo-wide structural view (JSON)
+scope --path src/ --changed           # only files changed since HEAD
+scope --path src/ --changed v1.0      # files changed since a ref
+scope --schema                        # document the JSON shape, then exit
 ```
 
-## Example Output
+Drill in with `jq`:
 
-```
-  handler.ts
-  TypeScript  |  Processes HTTP requests and routes to services
-
-  Symbols: 24  |  Roles: 6  |  Exports: 3  |  Imports: 8  |  Anomalies: 2  |  Configs: 4
-
-Read Order (start here)
-  1. execute (L155)  → entry_point  ← 3 refs
-  2. validateRequest (L42)  → accessor
-  3. formatResponse (L89)  → normalizer
-
-Anomalies
-  🟡 [MEDIUM] high_nesting L[120]
-  🟢 [LOW] hardcoded_value L[30]
-
-Roles
-  entry_point    1  |  normalizer  2  |  accessor  3
+```bash
+scope --path src/ | \
+  jq -r '.[].symbols[] | select(.role != "unknown") | [.name, .role, .refs, .blast_radius] | @tsv'
 ```
 
-## How It Works
+## Documentation
 
-```
-discover → parse → classify → extract → detect → rank → render
-```
+- [Reference — CLI flags & the JSON contract](docs/reference.md)
+- [Tutorial — orient yourself in a new codebase](docs/tutorials.md)
+- [How-to — practical workflows](docs/how-to.md)
+- [Architecture — how scope works](docs/architecture.md)
 
-Six phases layered on Tree-sitter symbol extraction. See [`docs/scope/SKILL.md`](docs/scope/SKILL.md) for the full workflow.
+## Contributing
+
+Bug reports and pull requests are welcome. Requirements are enforced in CI (ruff, mypy, pytest).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

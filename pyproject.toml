@@ -38,8 +38,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# _scope is inherited code — don't require docstrings, don't enforce line length
-"src/scope/_scope/*" = ["D", "E501", "N806", "B007", "SIM101", "SIM103", "SIM105", "F401"]
+# ast is the inherited low-level Tree-sitter engine — laxer lint/style policies
+"src/scope/ast/*" = ["D", "E501", "N806", "B007", "SIM101", "SIM103", "SIM105", "F401"]
 "src/scope/__init__.py" = ["D"]  # CLI entry stub, not yet documented
 
 [tool.ruff.format]
@@ -54,7 +54,7 @@ warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = "scope._scope.*"
+module = "scope.ast.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
