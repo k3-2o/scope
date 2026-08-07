@@ -21,15 +21,16 @@ from scope.types import ROLE_PRIORITY, ClassifiedSymbol
 def compute_read_order(symbols: list[ClassifiedSymbol]) -> list[str]:
     """Compute the ideal reading order for symbols in a file.
 
-    Returns a list of symbol names ranked by importance.
+    Sorts by role priority, then by the ranker's combined importance score
+    (PageRank-overlaid cross-file salience), then line number.
     """
-    # Create a mutable list and sort
     ranked = list(symbols)
 
     ranked.sort(
         key=lambda s: (
             ROLE_PRIORITY.get(s.role, 99),  # lower = more important
-            -s.ref_count,  # higher ref count = more important
+            -s.importance,  # higher salience = more important
+            -s.ref_count,  # then raw in-degree as a tiebreaker
             s.line,  # earlier in file = tiebreaker
         )
     )

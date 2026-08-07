@@ -26,6 +26,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from scope.ast.engine.references import read_text
 from scope.types import Anomaly, ClassifiedSymbol, Config, ExtractedData
 
 # ---------------------------------------------------------------------------
@@ -55,7 +56,7 @@ def detect_all(
     anomalies.extend(detect_inconsistent_error_handling(symbols, source))
     anomalies.extend(detect_hardcoded_values(symbols, source))
     anomalies.extend(detect_name_value_mismatch(extracted.configs))
-    anomalies.extend(detect_unused_export(symbols, all_file_symbols, file_path))
+    anomalies.extend(detect_unused_export(symbols, all_file_symbols, file_path, repo_path))
 
     severity_order = {"high": 0, "medium": 1, "low": 2}
     anomalies.sort(key=lambda a: (severity_order.get(a.severity, 99), a.type))
@@ -230,51 +231,49 @@ _DUAL_MODE_PATTERN = re.compile(
 
 
 def detect_dual_mode_handler(symbols: list[ClassifiedSymbol], source: str) -> list[Anomaly]:
-    """Detect functions that handle two different API response shapes.
+    """Detect symbols that handle multiple API response shapes.
 
-    Look for optional chaining patterns like `data?.field` vs
-    `data?.nested?.field` — indicating v1/v2 dual support.
+    Optional chaining lets one field be read at varying depths in the same
+    body, e.g. `data?.field` (depth 1) vs `data?.a?.b` (depth 2). When the
+    *same root* is dereferenced shallowly *and* deeply, the author is likely
+    supporting two different response shapes (v1/v2).
+
+    Each symbol is scanned only across its own definition window (its line to
+    the next symbol's), so findings don't leak into neighboring symbols.
     """
     anomalies: list[Anomaly] = []
+    lines = source.splitlines()
 
-    # Find symbols with v1/v2 fallback patterns
-    for sym in symbols:
-        if sym.role == "unknown":
-            continue
+    ordered = [s for s in symbols if 1 <= s.line <= len(lines)]
+    ordered.sort(key=lambda s: s.line)
 
-        # Check: the function body has both `?.field` and `?.nested?.field`
-        # for the same root object
-        if sym.line:
-            # Read a window around the symbol to check
-            pass  # For now, this is a placeholder — full implementation
-            # requires reading source lines per symbol
+    for i, sym in enumerate(ordered):
+        start = max(0, sym.line - 1)
+        end = ordered[i + 1].line - 1 if i + 1 < len(ordered) else len(lines)
+        window = "\n".join(lines[start:end])
 
-    # Simpler approach: scan source for dual-path patterns
-    # Pattern: `data?.field` and `data?.nested?.field` in close proximity
-    dual_matches = list(re.finditer(r"(\w+)\?\.\w+(?:\?\.\w+)*", source))
-    if len(dual_matches) >= 3:
-        # Check if the same root variable appears with different depths
-        root_counts: Counter[str] = Counter()
-        for m in dual_matches:
+        # The same root being read at multiple depths is the signal.
+        root_depths: dict[str, set[int]] = {}
+        for m in re.finditer(r"\b(\w+)\?\.\w+(?:\?\.\w+)*", window):
             root = m.group(1)
-            root_counts[root] += 1
+            depth = m.group(0).count("?.")
+            root_depths.setdefault(root, set()).add(depth)
 
-        for root, count in root_counts.items():
-            if count >= 3:
-                first_line = source[: dual_matches[0].start()].count("\n") + 1
+        for root, depths in root_depths.items():
+            if max(depths) >= 2 and 1 in depths:
                 anomalies.append(
                     Anomaly(
                         severity="medium",
                         type="dual_mode_handler",
                         message=(
-                            f"Variable '{root}' is accessed via optional "
-                            f"chaining at different depths ({count} occurrences). "
-                            "Likely handling multiple API response shapes (v1/v2)."
+                            f"'{root}' is accessed via optional chaining at "
+                            "different depths — likely handling multiple API "
+                            "response shapes (v1/v2)."
                         ),
-                        locations=[first_line],
+                        locations=[sym.line],
                     )
                 )
-                break  # One per file is enough
+                break  # one per symbol is enough
 
     return anomalies
 
@@ -387,7 +386,7 @@ def detect_high_nesting(symbols: list[ClassifiedSymbol], source: str) -> list[An
 
     max_depth = 0
     max_depth_line = 0
-    depth = 0
+    open_blocks: list[int] = []  # indentation of each open control-flow block
     in_function = False
 
     for i, line in enumerate(lines):
@@ -397,36 +396,31 @@ def detect_high_nesting(symbols: list[ClassifiedSymbol], source: str) -> list[An
         if not stripped or stripped.startswith(("#", "//", "/*", "*", "--")):
             continue
 
-        # Reset at function/class/def boundaries
-        if re.match(
-            r"^\s*(?:function|class|def|module|struct|trait|impl)\s",
-            stripped,
-        ):
-            depth = 1
+        # Reset at a function/class/module boundary
+        if re.match(r"^\s*(?:function|class|def|module|struct|trait|impl)\b", stripped):
+            open_blocks = []
             in_function = True
-            if depth > max_depth:
-                max_depth = depth
-                max_depth_line = i + 1
             continue
 
         if not in_function:
             continue
 
-        # Increase depth on control flow keywords
+        indent = len(line) - len(line.lstrip())
+
+        # Close any block at or below this line's indentation. Using indentation
+        # (instead of braces) keeps the count correct for both brace-less
+        # languages (Python/Ruby) and brace languages, and stops sibling blocks
+        # at the same indentation from being summed as nesting.
+        while open_blocks and indent <= open_blocks[-1]:
+            open_blocks.pop()
+
         if _NESTING_KW.match(stripped):
-            depth += 1
-            # Handle "} else {" or "} catch {" — decrement first
-            if stripped.startswith("}"):
-                depth -= 1  # compensate for the close brace
-            if depth > max_depth:
-                max_depth = depth
+            open_blocks.append(indent)
+            if len(open_blocks) > max_depth:
+                max_depth = len(open_blocks)
                 max_depth_line = i + 1
 
-        # Decrease depth on closing brace at line start
-        if stripped.startswith("}") and not _NESTING_KW.match(stripped):
-            depth = max(0, depth - 1)
-
-        if max_depth >= 12:
+        if max_depth >= 7:
             break
 
     if max_depth >= 7:
@@ -672,48 +666,45 @@ def detect_unused_export(
     symbols: list[ClassifiedSymbol],
     all_file_symbols: dict[str, list[ClassifiedSymbol]] | None,
     current_file: str,
+    repo_path: str | None = None,
 ) -> list[Anomaly]:
-    """Detect exported symbols that are not imported by any other file.
+    """Detect exported symbols that are not referenced by any other file.
 
-    Only works in directory/repo mode when all_file_symbols is provided.
+    Only works in directory/repo mode when ``all_file_symbols`` is provided.
+    Uses ``repo_path`` (the repo root ``detect_all`` already holds) so each other
+    file's source can be read to test whether the exported identifier appears
+    anywhere — rather than comparing symbol names against import-module names,
+    which can never match and would flag every export as unused.
     """
     if all_file_symbols is None:
         return []
 
-    exported_names = {s.name for s in symbols if s.is_exported}
-    if not exported_names:
+    exported = {s.name for s in symbols if s.is_exported}
+    if not exported:
         return []
 
-    # Collect all imports from other files (not current file)
-    all_imports: set[str] = set()
-    for file_path, _file_syms in all_file_symbols.items():
-        if file_path == current_file:
+    repo_root = repo_path or str(Path(current_file).parent)
+    used: set[str] = set()
+    for other_file in all_file_symbols:
+        if other_file == current_file:
             continue
-        # Read imports from each file's source
-        repo_path = Path(current_file).parent  # approximate
-        try:
-            from scope.engine.extractor import _extract_imports
+        other_src = read_text(repo_root, other_file)
+        if not other_src:
+            continue
+        for name in exported:
+            if re.search(rf"\b{re.escape(name)}\b", other_src):
+                used.add(name)
 
-            imports = _extract_imports(file_path, str(repo_path))
-            for imp_list in imports.values():
-                for imp in imp_list:
-                    # Extract the imported symbol name
-                    name = imp.split(".")[0]
-                    all_imports.add(name)
-        except Exception:
-            pass
-
-    unused = exported_names - all_imports
+    unused = sorted(exported - used)
     if unused:
-        names = ", ".join(sorted(unused))
         return [
             Anomaly(
                 severity="medium",
                 type="unused_export",
                 message=(
-                    f"Exported symbol(s) not imported by other files: {names}. May be dead code."
+                    f"Exported symbol(s) not referenced by other files: "
+                    f"{', '.join(unused)}. May be dead code."
                 ),
             )
         ]
-
     return []

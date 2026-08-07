@@ -15,7 +15,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scope._scope.engine.references import extract_imports as scope_extract_imports
+from scope.ast.engine.references import (
+    extract_imports as scope_extract_imports,
+)
+from scope.ast.engine.references import (
+    resolve_internal_import,
+)
 from scope.types import ClassifiedSymbol, Comment, Config, ExtractedData
 
 # ---------------------------------------------------------------------------
@@ -44,13 +49,20 @@ def extract_all(
     source: str,
     file_path: str,
     repo_path: str,
+    *,
+    repo_files: set[str] | None = None,
 ) -> ExtractedData:
-    """Run all extractors and return aggregated ExtractedData."""
+    """Run all extractors and return aggregated ExtractedData.
+
+    ``repo_files`` (rel paths of every scanned source file) lets import
+    classification tell *internal* modules (which resolve to a repo file) apart
+    from external packages.
+    """
     language = _detect_language(file_path)
     return ExtractedData(
         summary=_extract_header(comments),
         exports=_extract_exports(symbols, source, language),
-        imports=_extract_imports(file_path, repo_path),
+        imports=_extract_imports(file_path, repo_path, repo_files=repo_files),
         configs=_extract_configs(source),
     )
 
@@ -227,13 +239,16 @@ def _extract_exports(symbols: list[ClassifiedSymbol], source: str, language: str
 # ---------------------------------------------------------------------------
 
 
-def _extract_imports(file_path: str, repo_path: str) -> dict[str, list[str]]:
+def _extract_imports(
+    file_path: str, repo_path: str, *, repo_files: set[str] | None = None
+) -> dict[str, list[str]]:
     """Extract and categorize imports.
 
     Categorizes into:
       - built_in: Python stdlib, Node.js builtins
+      - internal: relative imports (./ ../) or modules that resolve to a
+                  scanned source file in this repo (``repo_files``)
       - external: third-party npm/pip packages
-      - internal: relative imports (./ ../)
 
     Uses scope's extract_imports() for parsing, then re-categorizes.
     """
@@ -252,8 +267,13 @@ def _extract_imports(file_path: str, repo_path: str) -> dict[str, list[str]]:
         if not imp:
             continue
 
-        # Categorize
-        if imp.startswith((".", "/")):
+        # Internal if it's a relative path, or resolves to a known repo file.
+        is_internal = imp.startswith((".", "/"))
+        if repo_files and not is_internal:
+            resolved = resolve_internal_import(imp, file_path, sorted(repo_files))
+            is_internal = resolved is not None
+
+        if is_internal:
             result["internal"].append(imp)
         elif _is_built_in(imp):
             result["built_in"].append(imp)
@@ -368,6 +388,7 @@ def _is_built_in(name: str) -> bool:
         "ctypes",
         "unittest",
         "pytest",
+        "__future__",
     }
 
     # Node.js built-in module names

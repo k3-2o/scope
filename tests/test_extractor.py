@@ -1,6 +1,11 @@
-"""Tests for the extractor — headers, exports, configs."""
+"""Tests for the extractor — headers, exports, imports, configs."""
 
-from scope.engine.extractor import _extract_header, _extract_exports, _extract_configs
+from scope.engine.extractor import (
+    _extract_configs,
+    _extract_exports,
+    _extract_header,
+    _extract_imports,
+)
 from scope.types import Comment
 
 
@@ -80,3 +85,21 @@ class TestConfigExtraction:
         source = "function foo() { return 42; }"
         configs = _extract_configs(source)
         assert configs == []
+
+
+class TestImportClassification:
+    def test_internal_module_resolves_to_repo_file(self, tmp_path):
+        (tmp_path / "a.py").write_text("from scope.mod import foo\n")
+        result = _extract_imports("a.py", str(tmp_path), repo_files={"mod.py"})
+        assert "scope.mod" in result["internal"]
+
+    def test_builtin_recognized(self, tmp_path):
+        (tmp_path / "a.py").write_text("from __future__ import annotations\nimport os\n")
+        result = _extract_imports("a.py", str(tmp_path), repo_files=None)
+        assert "__future__" in result["built_in"]
+        assert "os" in result["built_in"]
+
+    def test_unknown_package_is_external(self, tmp_path):
+        (tmp_path / "a.py").write_text("import third_party_pkg_xyz\n")
+        result = _extract_imports("a.py", str(tmp_path), repo_files=None)
+        assert "third_party_pkg_xyz" in result["external"]

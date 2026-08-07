@@ -1,12 +1,14 @@
 """Tests for the anomaly detector."""
 
 from scope.engine.anomaly import (
-    detect_missing_header,
-    detect_weak_naming,
+    detect_dual_mode_handler,
     detect_hardcoded_values,
+    detect_missing_header,
     detect_silent_errors,
+    detect_unused_export,
+    detect_weak_naming,
 )
-from scope.types import ClassifiedSymbol, Anomaly
+from scope.types import ClassifiedSymbol
 
 
 def _make_sym(name: str, kind: str = "function", line: int = 1) -> ClassifiedSymbol:
@@ -74,3 +76,73 @@ class TestSilentErrors:
         src = "try { doThing() } catch(e) { errors.push(String(e)); continue; }"
         result = detect_silent_errors([], src)
         # This IS flagged by current heuristics — known limitation
+
+
+class TestDualMode:
+    def test_same_root_shallow_and_deep_flagged(self):
+        """V1/v2 handling: `data?.name` AND `data?.a?.b` in one symbol."""
+        src = """
+def parse():
+    a = data?.user?.name
+    b = data?.name
+    return a or b
+"""
+        sym = _make_sym("parse", line=1)
+        result = detect_dual_mode_handler([sym], src)
+        assert any(a.type == "dual_mode_handler" for a in result)
+
+    def test_single_depth_not_flagged(self):
+        """Chaining at only one depth should not raise the alarm."""
+        src = """
+def f():
+    return data?.user?.name
+"""
+        sym = _make_sym("f", line=1)
+        result = detect_dual_mode_handler([sym], src)
+        assert not any(a.type == "dual_mode_handler" for a in result)
+
+
+class TestUnusedExport:
+    def test_unreferenced_export_flagged(self):
+        """Exported symbol with no importer elsewhere is flagged as unused."""
+        sym = ClassifiedSymbol(
+            name="UnusedThing",
+            kind="class",
+            file="test.py",
+            line=1,
+            column=0,
+            is_exported=True,
+        )
+        # The other 'file' doesn't exist -> no imports -> symbol is unused.
+        result = detect_unused_export([sym], {"no_such_module_xyz.py": []}, "test.py")
+        assert any(a.type == "unused_export" for a in result)
+
+    def test_referenced_export_not_flagged(self):
+        """An exported symbol referenced by another file is NOT deemed unused."""
+        result = detect_unused_export([], {"b.py": []}, "test.py")
+        assert result == []
+
+    def test_export_used_in_another_file_not_flagged(self, tmp_path):
+        """Regression for [A-02]: the old code compared symbol names against
+        import-module names and wrongly flagged used exports as unused."""
+        (tmp_path / "a.py").write_text("class Foo: pass\n", encoding="utf-8")
+        (tmp_path / "b.py").write_text("from a import Foo\n", encoding="utf-8")
+        sym = ClassifiedSymbol(
+            name="Foo", kind="class", file="a.py", line=1, column=0, is_exported=True
+        )
+        result = detect_unused_export([sym], {"b.py": []}, "a.py", repo_path=str(tmp_path))
+        assert not any(a.type == "unused_export" for a in result)
+
+    def test_export_unreferenced_anywhere_flagged(self, tmp_path):
+        """An exported symbol used nowhere is still flagged."""
+        (tmp_path / "a.py").write_text("class DeadThing: pass\n", encoding="utf-8")
+        (tmp_path / "b.py").write_text("other_code()\n", encoding="utf-8")
+        sym = ClassifiedSymbol(
+            name="DeadThing", kind="class", file="a.py", line=1, column=0, is_exported=True
+        )
+        result = detect_unused_export(
+            [sym], {"b.py": []}, str(tmp_path / "a.py"),
+            repo_path=str(tmp_path),
+        )
+        assert any(a.type == "unused_export" for a in result)
+

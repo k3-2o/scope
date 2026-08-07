@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from scope._scope.engine.discover import SUPPORTED_EXTENSIONS
+from scope.ast.engine.discover import SUPPORTED_EXTENSIONS
 
 IMPORT_RE = re.compile(
     r"(?:from\s+([\w\.\/\-@]+)\s+import|import\s+([\w\.\/\-@]+)|require\(['\"]([^'\"]+)['\"]\)|use\s+([\w:]+))"
@@ -59,22 +59,30 @@ def extract_imports(repo_path: str, rel_path: str) -> list[str]:
 
 def resolve_internal_import(import_name: str, importer: str, files: list[str]) -> str | None:
     file_set = set(files)
-    candidates: list[str] = []
+    candidates: set[str] = set()
+
+    # Relative imports (Python ./ ../)
     if import_name.startswith("."):
         base = Path(importer).parent / import_name
-        candidates.extend(
-            str(base.with_suffix(ext)).replace("\\", "/") for ext in SUPPORTED_EXTENSIONS
-        )
-        candidates.extend(
-            str(base / f"index{ext}").replace("\\", "/") for ext in (".ts", ".tsx", ".js")
-        )
-    dotted = import_name.replace(".", "/").replace("::", "/")
-    candidates.extend(f"{dotted}{ext}" for ext in SUPPORTED_EXTENSIONS)
-    candidates.extend(f"src/{dotted}{ext}" for ext in SUPPORTED_EXTENSIONS)
-    for candidate in candidates:
-        normalized = os.path.normpath(candidate).replace("\\", "/")
-        if normalized in file_set:
-            return normalized
+        base_s = str(base).replace("\\", "/")
+        candidates.add(base_s)  # bare module file (extension appended later)
+        candidates.add(base_s + "/index")  # or a package dir with an index module
+
+    # Absolute module names — try progressively shorter prefixes so the package
+    # root doesn't have to coincide with the scanned directory root.
+    dotted = import_name.replace("::", "/").replace(".", "/")
+    segs = dotted.strip("/").split("/")
+    for i in range(len(segs)):
+        stem = "/".join(segs[i:])
+        for prefix in ("", "src/"):
+            padded = (prefix + stem) if prefix else stem
+            candidates.add(padded)
+
+    for cand in candidates:
+        for ext in SUPPORTED_EXTENSIONS:
+            norm = os.path.normpath(cand + ext).replace("\\", "/")
+            if norm in file_set:
+                return norm
     return None
 
 

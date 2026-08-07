@@ -6,7 +6,25 @@ import os
 from pathlib import Path
 from typing import Any
 
-from scope._scope.models import Symbol
+from scope.ast.models import Symbol
+
+
+def _git_head(repo_path: str) -> str:
+    """Return the current git HEAD as a string for cache invalidation.
+
+    Read directly from .git rather than importing a git wrapper so the cache
+    module stays self-contained.
+    """
+    git_dir = Path(repo_path) / ".git"
+    try:
+        head = git_dir / "HEAD"
+        text = head.read_text(encoding="utf-8", errors="ignore").strip()
+        if text.startswith("ref: "):
+            ref_path = git_dir / text[5:]
+            return ref_path.read_text(encoding="utf-8", errors="ignore").strip()
+        return text
+    except OSError:
+        return ""
 
 
 def cache_dir(repo_path: str) -> Path:
@@ -27,10 +45,8 @@ def cache_file(repo_path: str) -> Path:
 
 
 def files_signature(repo_path: str, files: list[str]) -> str:
-    from scope._scope.engine.git import git_head
-
     h = hashlib.sha256()
-    h.update(git_head(repo_path).encode())
+    h.update(_git_head(repo_path).encode())
     for rel_path in files:
         full_path = Path(repo_path) / rel_path
         try:
@@ -46,7 +62,7 @@ def files_signature(repo_path: str, files: list[str]) -> str:
 def load_cached_symbols(
     repo_path: str, files: list[str], scope: str, max_files: int
 ) -> dict[str, list[Symbol]] | None:
-    from scope._scope.engine.discover import normalize_scope
+    from scope.ast.engine.discover import normalize_scope
 
     path = cache_file(repo_path)
     try:
@@ -68,7 +84,7 @@ def save_cached_symbols(
     max_files: int,
     all_symbols: dict[str, list[Symbol]],
 ) -> None:
-    from scope._scope.engine.discover import normalize_scope
+    from scope.ast.engine.discover import normalize_scope
 
     payload = {
         "version": 2,

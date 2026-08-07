@@ -14,8 +14,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from scope._scope.engine.discover import discover_files
-from scope._scope.engine.symbols import extract_symbols, get_parser
+from scope.ast.engine.discover import discover_files
+from scope.ast.engine.symbols import extract_symbols, get_parser
 from scope.types import ClassifiedSymbol, Comment, ParserResult
 
 # ---------------------------------------------------------------------------
@@ -49,11 +49,19 @@ def discover(repo_path: str, sub_scope: str = ".") -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def parse_file(file_path: str, repo_path: str) -> ParserResult:
+def parse_file(
+    file_path: str,
+    repo_path: str,
+    scope_symbols: list | None = None,
+) -> ParserResult:
     """Parse a single file with Tree-sitter and collect:
-    - symbols (from scope's extract_symbols, converted to ClassifiedSymbol)
+    - symbols (from extract_symbols, converted to ClassifiedSymbol)
     - comments (from AST walk)
     - source text and metadata
+
+    ``scope_symbols`` lets callers reuse an already-extracted symbol list
+    (e.g. from a directory-wide pass) instead of re-running the Tree-sitter
+    walk — avoids double-parsing the same file.
     """
     full_path = os.path.join(repo_path, file_path) if not os.path.isabs(file_path) else file_path
     ext = Path(file_path).suffix
@@ -102,8 +110,9 @@ def parse_file(file_path: str, repo_path: str) -> ParserResult:
 
     language = _ext_to_lang(ext)
 
-    # --- Extract symbols via scope ---
-    scope_symbols = extract_symbols(file_path, repo_path)
+    # --- Extract symbols via scope (unless the caller supplied them) ---
+    if scope_symbols is None:
+        scope_symbols = extract_symbols(file_path, repo_path)
 
     # Convert inherited Symbol to ClassifiedSymbol
     classified: list[ClassifiedSymbol] = []
@@ -121,6 +130,8 @@ def parse_file(file_path: str, repo_path: str) -> ParserResult:
                 confidence="low",
                 reasoning="",
                 ref_count=getattr(sym, "ref_count", 0),
+                importance=getattr(sym, "importance", 0.0),
+                blast_radius=getattr(sym, "blast_radius", 0),
             )
         )
 

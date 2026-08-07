@@ -18,6 +18,7 @@ class Symbol:
     # Populated by rank module
     importance: float = 0.0
     ref_count: int = 0
+    blast_radius: int = 0  # files transitively depending on this symbol's file
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -31,6 +32,7 @@ class Symbol:
             "signature": self.signature,
             "importance": self.importance,
             "ref_count": self.ref_count,
+            "blast_radius": self.blast_radius,
         }
 
     @classmethod
@@ -46,4 +48,5 @@ class Symbol:
             signature=str(data["signature"]) if data.get("signature") else None,
             importance=float(data.get("importance", 0.0)),
             ref_count=int(data.get("ref_count", 0)),
+            blast_radius=int(data.get("blast_radius", 0)),
         )

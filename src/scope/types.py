@@ -63,7 +63,9 @@ class ClassifiedSymbol:
     role: Role = "unknown"
     confidence: str = "low"  # "high" | "medium" | "low"
     reasoning: str = ""  # human-readable: why this role was assigned
-    ref_count: int = 0  # populated by ranker
+    ref_count: int = 0  # populated by ranker (cross-file in-degree)
+    importance: float = 0.0  # populated by ranker (combined graph salience)
+    blast_radius: int = 0  # files transitively depending on this symbol's file
 
 
 @dataclass
