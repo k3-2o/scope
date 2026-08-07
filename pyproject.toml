@@ -1,6 +1,6 @@
 [project]
 name = "scope"
-version = "0.1.0"
+version = "0.2.0"
 description = "Codebase orientation radar — know what you're looking at, fast"
 requires-python = ">=3.11"
 dependencies = [
