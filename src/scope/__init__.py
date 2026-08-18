@@ -420,6 +420,7 @@ def _scope_schema() -> dict:
                 "file", "language", "summary", "total_lines", "symbols",
                 "read_order", "exports", "imports", "configs", "roles", "anomalies",
             ],
+            "optional": ["note"],
         },
         "directory": {"type": "array", "items": {"ref": "single_file"}},
         "symbol": {
