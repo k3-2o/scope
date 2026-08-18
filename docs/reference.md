@@ -40,7 +40,7 @@ The summary keeps the card to the fields an agent or a glance needs; `--full` ex
 |---|---|---|
 | `file` | string | File path (relative to the scanned directory). |
 | `language` | string | Detected language, e.g. `Python`, `TypeScript`. |
-| `lines` | int | Line count. |
+| `total_lines` | int | Line count. |
 | `top` | array (≤8) | Highest-`importance` symbols: `{name, role, line, blast}`. |
 | `roles` | object | role → count. |
 | `anomalies` | array | Compact `{type, severity, loc}` (locations only; for the message use `--full`). |

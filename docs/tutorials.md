@@ -40,7 +40,7 @@ Example (trimmed):
 {
   "file": "types.py",
   "language": "Python",
-  "lines": 248,
+  "total_lines": 248,
   "top": [{ "name": "ClassifiedSymbol", "role": "unknown", "line": 3, "blast": 0 }],
   "roles": {}, "anomalies": []
 }

@@ -415,7 +415,7 @@ def _scope_schema() -> dict:
         "mode": "orient | audit",
         "single_file": {
             "type": "object",
-            "default": ["file", "language", "lines", "top", "roles", "anomalies"],
+            "default": ["file", "language", "total_lines", "top", "roles", "anomalies"],
             "full": [
                 "file", "language", "summary", "total_lines", "symbols",
                 "read_order", "exports", "imports", "configs", "roles", "anomalies",
@@ -483,7 +483,7 @@ def _lean_card_dict(card: OrientationCard) -> dict:
     return {
         "file": card.file_path,
         "language": card.language,
-        "lines": card.total_lines,
+        "total_lines": card.total_lines,
         "top": [
             {"name": s.name, "role": s.role, "line": s.line, "blast": s.blast_radius}
             for s in top

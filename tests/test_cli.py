@@ -153,7 +153,7 @@ class TestLeanDefaultAndExitCode:
         # Lean cards omit the detailed blocks entirely.
         for key in ("symbols", "read_order", "exports", "configs"):
             assert key not in card
-        assert set(card) == {"file", "language", "lines", "top", "roles", "anomalies"}
+        assert set(card) == {"file", "language", "total_lines", "top", "roles", "anomalies"}
 
     def test_full_restores_detailed_blocks(self):
         out = _run(scope._handle_directory_orient, TESTS_DIR, 10, full=True)
