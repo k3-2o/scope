@@ -6,7 +6,9 @@ from scope.engine.classifier import classify_symbols
 from scope.types import ClassifiedSymbol
 
 
-def _make_sym(name: str, kind: str = "function", line: int = 1, exported: bool = False) -> ClassifiedSymbol:
+def _make_sym(
+    name: str, kind: str = "function", line: int = 1, exported: bool = False
+) -> ClassifiedSymbol:
     return ClassifiedSymbol(
         name=name,
         kind=kind,

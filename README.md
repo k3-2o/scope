@@ -29,13 +29,20 @@ scope --path src/                    # a directory → JSON array of files
 scope --path src/ --mode audit       # repo-wide structural view (JSON)
 scope --path src/ --changed           # only files changed since HEAD
 scope --path src/ --changed v1.0      # files changed since a ref
+scope --path src/ --full              # detailed per-symbol view
+scope --path src/ --exit-code         # exit 1 when any anomaly is flagged
 scope --schema                        # document the JSON shape, then exit
 ```
+
+By default the output is a **compact summary** per file (top symbols, role
+tallies, anomalies) — trimmed so an agent can afford to read it. `--full`
+expands to every symbol with `refs`/`importance`/`blast_radius`/`read_order`.
+
 
 Drill in with `jq`:
 
 ```bash
-scope --path src/ | \
+scope --path src/ --full | \
   jq -r '.[].symbols[] | select(.role != "unknown") | [.name, .role, .refs, .blast_radius] | @tsv'
 ```
 

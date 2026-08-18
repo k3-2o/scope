@@ -7,7 +7,7 @@ Task-oriented recipes for `scope`. Each solves one problem. For every flag in de
 Rank files/symbols by dependency centrality, not by size.
 
 ```bash
-scope --path /my/project | jq -r '
+scope --path /my/project --full | jq -r '
   .[] | select(any(.symbols[]; .blast_radius > 0))
        | [.file, ([.symbols[] | .blast_radius] | max)] | @tsv'
 ```
@@ -15,7 +15,7 @@ scope --path /my/project | jq -r '
 High blast radius = many files transitively depend on this one. Changed it, and it ripples. Want the **whole repo**, not the first 20 files:
 
 ```bash
-scope --path /my/project --max-files 10000
+scope --path /my/project --max-files 10000 --full
 ```
 
 **Verify:** the files listed each have `blast_radius > 0`, and the top rows are the files you'd expect (data models, shared utils), not tests.
@@ -62,7 +62,7 @@ Scope was built for agents. Have the agent:
 scope --path <dir> | jq -c '. as $ro | ... '
 ```
 
-For an agent, the highest-value fields are `read_order` (which symbols to read first), `blast_radius` (what a change affects), and `role` (what a symbol does). Instruct the agent to **read the `read_order` symbols, not re-derive the map**, and to check `blast_radius` before renaming/moving a shared symbol.
+For an agent, the highest-value fields are `read_order`, `blast_radius`, and `role` (in the `--full` view). Instruct the agent to **read the `read_order` symbols, not re-derive the map**, and to check `blast_radius` before renaming/moving a shared symbol.
 
 ## How to look genuinely, not skim
 

@@ -28,22 +28,25 @@ Point scope at any file you are curious about (this example uses the project's o
 scope --path src/scope/types.py
 ```
 
-You get one JSON object. The parts that matter first:
+You get one compact JSON object. What matters first:
 
-- `summary` — the file's one-line purpose (from its header comment).
-- `symbols` — every class/function with a `role`, `refs`, and `blast_radius`.
-- `read_order` — the order scope suggests you read the symbols.
+- `top` — the top-`importance` symbols (up to 8) with `name`, `role`, `line`, and `blast`.
+- `roles` — how many instances of each role the file has.
+- `anomalies` — anything suspicious, with `type`, `severity`, and `loc`.
 
-Expected (trimmed) output:
+Example (trimmed):
 
 ```json
 {
   "file": "types.py",
   "language": "Python",
-  "summary": "Role classification",
-  "symbols": [{ "name": "ClassifiedSymbol", "kind": "class", "role": "unknown" }]
+  "lines": 248,
+  "top": [{ "name": "ClassifiedSymbol", "role": "unknown", "line": 3, "blast": 0 }],
+  "roles": {}, "anomalies": []
 }
 ```
+
+Add `--full` to expand every symbol with `summary`, `read_order`, `refs`, `importance`, and the human-readable anomaly `message`.
 
 > In single-file mode `refs`/`blast_radius` are `0` (there is no surrounding graph). A `note` field tells you this. For ranking you need a directory — that's Step 3.
 
@@ -55,14 +58,14 @@ To see importance and blast radius, hand scope the whole tree:
 scope --path path/to/my/project
 ```
 
-You get a JSON **array**, one card per file. To find the files that matter most, look at which cards have the highest `blast_radius` on their symbols: those are the files the most code depends on.
+You get a JSON **array**, one card per file. To find the files that matter most, sort cards by their `top[].blast` field (or run `--full` and use each symbol's `blast_radius`): those are the files the most code depends on.
 
 ## Step 4 — Read it like a human with jq
 
 If `jq` is installed, you can turn the directory array into a skim-able table:
 
 ```bash
-scope --path /to/my/project | \
+scope --path /to/my/project --full | \
   jq -r '.[].symbols[] | select(.role != "unknown") | [.name, .role, .refs, .blast_radius] | @tsv'
 ```
 

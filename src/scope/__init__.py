@@ -67,6 +67,16 @@ def main() -> None:
     ap.add_argument(
         "--schema", action="store_true", help="Print the JSON output schema and exit"
     )
+    ap.add_argument(
+        "--full",
+        action="store_true",
+        help="Emit the detailed per-symbol view (default is a compact summary)",
+    )
+    ap.add_argument(
+        "--exit-code",
+        action="store_true",
+        help="Exit 1 if any anomaly was detected (0 otherwise), like semgrep/lizard",
+    )
     args = ap.parse_args()
 
     if args.schema:
@@ -88,15 +98,25 @@ def main() -> None:
 
     # --- Dispatch ---
     if os.path.isfile(path):
-        _handle_file(path, None)
+        _handle_file(path, None, full=args.full, exit_code=args.exit_code)
     elif os.path.isdir(path):
         if args.mode == "audit":
             _handle_directory_audit(
-                path, args.max_files, not args.no_cache, args.changed
+                path,
+                args.max_files,
+                not args.no_cache,
+                args.changed,
+                full=args.full,
+                exit_code=args.exit_code,
             )
         else:
             _handle_directory_orient(
-                path, args.max_files, not args.no_cache, args.changed
+                path,
+                args.max_files,
+                not args.no_cache,
+                args.changed,
+                full=args.full,
+                exit_code=args.exit_code,
             )
     else:
         print(f"Error: not a file or directory: {path}", file=sys.stderr)
@@ -212,17 +232,24 @@ def _collect_symbols_and_refs(
 # ---------------------------------------------------------------------------
 
 
-def _handle_file(file_path: str, repo_path: str | None) -> OrientationCard | None:
-    """Process a single file and print its orientation card as JSON."""
+def _handle_file(
+    file_path: str,
+    repo_path: str | None,
+    full: bool = False,
+    exit_code: bool = False,
+) -> OrientationCard | None:
+    """Process a single file and print its (lean or full) JSON card."""
     card = _build_card(file_path, repo_path)
     if card is None:
         _, rel = _resolve_repo_path(file_path, repo_path)
         print(json.dumps({"file": rel, "symbols": [], "error": "no symbols extracted"}))
         return None
 
-    payload = _card_to_dict(card)
+    payload = _card_to_dict(card) if full else _lean_card_dict(card)
     _attach_single_file_note(payload)
-    print(json.dumps(payload, indent=2))
+    _emit_json(payload, full)
+    if exit_code and card.anomalies:
+        sys.exit(1)
     return card
 
 
@@ -239,7 +266,12 @@ def _attach_single_file_note(payload: dict) -> None:
 
 
 def _handle_directory_orient(
-    dir_path: str, max_files: int, use_cache: bool = True, changed: str | None = None
+    dir_path: str,
+    max_files: int,
+    use_cache: bool = True,
+    changed: str | None = None,
+    full: bool = False,
+    exit_code: bool = False,
 ) -> None:
     """Process a directory and emit per-file orientation cards as JSON."""
     files = discover(dir_path)
@@ -271,11 +303,19 @@ def _handle_directory_orient(
         if card:
             cards.append(card)
 
-    print(json.dumps([_card_to_dict(c) for c in cards], indent=2))
+    payloads = [(_card_to_dict if full else _lean_card_dict)(c) for c in cards]
+    _emit_json(payloads, full)
+    if exit_code and _any_anomalies(cards):
+        sys.exit(1)
 
 
 def _handle_directory_audit(
-    dir_path: str, max_files: int, use_cache: bool = True, changed: str | None = None
+    dir_path: str,
+    max_files: int,
+    use_cache: bool = True,
+    changed: str | None = None,
+    full: bool = False,
+    exit_code: bool = False,
 ) -> None:
     """Process a directory and emit the structural audit summary as JSON."""
     files = discover(dir_path)
@@ -307,7 +347,10 @@ def _handle_directory_audit(
         if card:
             cards.append(card)
 
-    print(json.dumps([_card_to_dict(c) for c in cards], indent=2))
+    payloads = [(_card_to_dict if full else _lean_card_dict)(c) for c in cards]
+    _emit_json(payloads, full)
+    if exit_code and _any_anomalies(cards):
+        sys.exit(1)
 
 
 def _changed_files(files: list[str], dir_path: str, ref: str | None) -> list[str]:
@@ -372,7 +415,8 @@ def _scope_schema() -> dict:
         "mode": "orient | audit",
         "single_file": {
             "type": "object",
-            "fields": [
+            "default": ["file", "language", "lines", "top", "roles", "anomalies"],
+            "full": [
                 "file", "language", "summary", "total_lines", "symbols",
                 "read_order", "exports", "imports", "configs", "roles", "anomalies",
             ],
@@ -395,6 +439,8 @@ def _scope_schema() -> dict:
             "accessor", "mutator", "unknown",
         ],
         "note_single_file": "refs/blast_radius/importance are 0 outside a directory scan",
+        "top": ["name", "role", "line", "blast"],
+        "default": "compact summary (minified); --full emits the detailed card",
     }
 
 
@@ -421,6 +467,46 @@ def _resolve_repo_path(file_path: str, repo_path: str | None) -> tuple[str, str]
     abs_file = os.path.abspath(file_path)
     parent = os.path.dirname(abs_file)
     return parent, os.path.basename(abs_file)
+
+
+def _lean_card_dict(card: OrientationCard) -> dict:
+    """Compact, agent-friendly summary: top-ranked symbols + counts only.
+
+    The default output. Full per-symbol detail (refs, confidence, read order,
+    exports, configs) is available with ``--full``.
+    """
+    top = sorted(
+        card.symbols,
+        key=lambda s: (s.importance, getattr(s, "ref_count", 0)),
+        reverse=True,
+    )[:8]
+    return {
+        "file": card.file_path,
+        "language": card.language,
+        "lines": card.total_lines,
+        "top": [
+            {"name": s.name, "role": s.role, "line": s.line, "blast": s.blast_radius}
+            for s in top
+        ],
+        "roles": card.roles,
+        "anomalies": [
+            {"type": a.type, "severity": a.severity, "loc": a.locations}
+            for a in card.anomalies
+        ],
+    }
+
+
+def _any_anomalies(cards: list[OrientationCard]) -> bool:
+    """True if any card reported at least one anomaly (for --exit-code)."""
+    return any(bool(c.anomalies) for c in cards)
+
+
+def _emit_json(payload: object, full: bool) -> None:
+    """Print one JSON doc: pretty for --full, minified for the lean default."""
+    if full:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(json.dumps(payload, separators=(",", ":")))
 
 
 def _card_to_dict(card: OrientationCard) -> dict:

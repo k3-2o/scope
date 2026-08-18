@@ -68,13 +68,13 @@ class TestSilentErrors:
 
     def test_meaningful_catch_not_flagged(self):
         src = "try { doThing() } catch(e) { console.error(e); throw e; }"
-        result = detect_silent_errors([], src)
+        detect_silent_errors([], src)
         # May still have pattern matches — this tests fine
 
     def test_errors_push_not_silent(self):
         """errors.push(...) with real error is not silent."""
         src = "try { doThing() } catch(e) { errors.push(String(e)); continue; }"
-        result = detect_silent_errors([], src)
+        detect_silent_errors([], src)
         # This IS flagged by current heuristics — known limitation
 
 

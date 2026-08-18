@@ -115,6 +115,7 @@ now the single CLI with per-file orientation cards and a directory/audit view:
 
 ```
 scope --path <file|dir> [--mode orient|audit] [--max-files N] [--no-cache]
+       [--changed [REF]] [--schema] [--full] [--exit-code]
 ```
 
 Output is always JSON; pipe through `jq` for any human layout.

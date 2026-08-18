@@ -28,7 +28,7 @@ class TestDirectoryJSON:
         data = json.loads(out)  # raises if the output isn't one valid doc
         assert isinstance(data, list)
         assert len(data) >= 1
-        assert any("file" in card and "symbols" in card for card in data)
+        assert any("file" in card and "top" in card for card in data)
 
     def test_audit_output_is_a_single_json_array(self):
         out = _run(scope._handle_directory_audit, TESTS_DIR, 10)
@@ -43,7 +43,7 @@ class TestDirectoryJSON:
         assert data.get("file") == "test_anomaly.py"
 
     def test_read_order_and_symbol_fields_present(self):
-        out = _run(scope._handle_directory_orient, TESTS_DIR, 10)
+        out = _run(scope._handle_directory_orient, TESTS_DIR, 10, full=True)
         data = json.loads(out)
         card = next(c for c in data if c["symbols"])
         assert "read_order" in card
@@ -101,7 +101,7 @@ class TestSchemaAndNotes:
     def test_schema_is_well_formed(self):
         schema = scope._scope_schema()
         assert schema["version"] == 1
-        assert "symbols" in schema["single_file"]["fields"]
+        assert "top" in schema["single_file"]["default"]
 
     def test_single_file_json_includes_note(self):
         target = os.path.join(TESTS_DIR, "test_anomaly.py")
@@ -141,3 +141,32 @@ class TestCacheWiring:
 
         assert isinstance(first, list) and isinstance(second, list)
         assert len(extracted) == 0, f"cache hit should skip re-parse, got: {extracted}"
+
+
+class TestLeanDefaultAndExitCode:
+    """The compact summary is the default; --full and --exit-code are opt-in."""
+
+    def test_default_is_lean_compact_summary(self):
+        out = _run(scope._handle_directory_orient, TESTS_DIR, 10)
+        data = json.loads(out)
+        card = next(c for c in data if c.get("top"))
+        # Lean cards omit the detailed blocks entirely.
+        for key in ("symbols", "read_order", "exports", "configs"):
+            assert key not in card
+        assert set(card) == {"file", "language", "lines", "top", "roles", "anomalies"}
+
+    def test_full_restores_detailed_blocks(self):
+        out = _run(scope._handle_directory_orient, TESTS_DIR, 10, full=True)
+        data = json.loads(out)
+        card = next(c for c in data if c.get("symbols"))
+        assert "read_order" in card and "exports" in card
+
+    def test_exit_code_reflects_anomalies(self, tmp_path):
+        # exit_code=True triggers SystemExit(1) when a card has anomalies.
+        import pytest
+        f = tmp_path / "x.py"
+        f.write_text("def f():\n    try:\n        x = 1\n    except:\n        pass\n",
+                     encoding="utf-8")
+        with pytest.raises(SystemExit) as e:
+            _run(scope._handle_directory_orient, str(tmp_path), 5, exit_code=True)
+        assert e.value.code == 1
